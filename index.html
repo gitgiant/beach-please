@@ -186,14 +186,63 @@ function metricsRow(m, mins) {
 async function main() {
   let data;
   try {
-    const r = await fetch("/api/tides");
-    data = await r.json();
-    if (data.error) throw new Error(data.error);
+    const STATION = "9410230";
+    const today = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    const fmtDate = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+    const begin = fmtDate(today);
+    const end = fmtDate(new Date(today.getTime() + 6 * dayMs));
+
+    const noaaBase = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
+      + `?product=predictions&application=tide-dog&begin_date=${begin}&end_date=${end}`
+      + `&datum=MLLW&station=${STATION}&time_zone=lst_ldt&units=english&format=json`;
+
+    const [hiloRes, curveRes, marineRes, windRes] = await Promise.all([
+      fetch(noaaBase + "&interval=hilo").then(r => r.json()),
+      fetch(noaaBase + "&interval=h").then(r => r.json()),
+      fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LNG}&timezone=America%2FLos_Angeles&forecast_days=7&hourly=swell_wave_height,swell_wave_direction,swell_wave_period`).then(r => r.json()).catch(() => null),
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&timezone=America%2FLos_Angeles&forecast_days=7&wind_speed_unit=mph&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m`).then(r => r.json()).catch(() => null),
+    ]);
+
+    if (hiloRes.error) throw new Error(hiloRes.error.message || JSON.stringify(hiloRes.error));
+    if (curveRes.error) throw new Error(curveRes.error.message || JSON.stringify(curveRes.error));
+
+    // Build marine map keyed by "YYYY-MM-DDTHH:00"
+    const marine = {};
+    if (marineRes && marineRes.hourly) {
+      marineRes.hourly.time.forEach((t, i) => {
+        const sh = marineRes.hourly.swell_wave_height[i];
+        marine[t] = {
+          swellHeightFt: sh != null ? Math.round(sh * 3.28084 * 10) / 10 : null,
+          swellDir: marineRes.hourly.swell_wave_direction[i],
+          swellPeriod: marineRes.hourly.swell_wave_period[i],
+        };
+      });
+    }
+    if (windRes && windRes.hourly) {
+      windRes.hourly.time.forEach((t, i) => {
+        const rec = marine[t] || (marine[t] = {});
+        rec.windMph = windRes.hourly.wind_speed_10m[i];
+        rec.windDir = windRes.hourly.wind_direction_10m[i];
+        rec.gustMph = windRes.hourly.wind_gusts_10m[i];
+      });
+    }
+
+    data = {
+      station: STATION,
+      stationName: "La Jolla (Scripps Pier) — NOAA's nearest prediction station to Oceanside",
+      lat: LAT, lng: LNG,
+      units: "ft", datum: "MLLW",
+      begin, end,
+      hilo: hiloRes.predictions || [],
+      curve: curveRes.predictions || [],
+      marine,
+    };
   } catch (err) {
     document.getElementById("loading").style.display = "none";
     const e = document.getElementById("error");
     e.style.display = "block";
-    e.textContent = "Could not load tides: " + err.message + ". (Are you online? The server proxies NOAA.)";
+    e.textContent = "Could not load tides: " + err.message;
     return;
   }
 
