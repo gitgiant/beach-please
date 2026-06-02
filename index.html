@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🐾 Beach, Please — Low Tide, Good Boy</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1b2d;
+    --card: #16263d;
+    --card-good: #2a2913;
+    --ink: #e8eef6;
+    --muted: #8aa0bd;
+    --line: #3aa0ff;
+    --good: #ffd21f;
+    --good-soft: rgba(255, 210, 31, .14);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 70% -10%, #1d3553, var(--bg));
+    color: var(--ink); min-height: 100vh; padding: 28px 20px 60px;
+  }
+  header { max-width: 1180px; margin: 0 auto 8px; }
+  h1 { margin: 0 0 2px; font-size: 26px; letter-spacing: .2px; }
+  .tagline { color: var(--good); font-size: 13.5px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+  .sub b { color: var(--ink); }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0 6px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+  .controls { max-width: 1180px; margin: 12px auto 0; display: flex; align-items: center;
+    gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid #24344f;
+    border-radius: 12px; padding: 11px 16px; }
+  .controls label { font-size: 13.5px; color: var(--ink); display: inline-flex; align-items: center; gap: 8px; }
+  .controls input { width: 64px; background: #0e1a2b; color: var(--ink); border: 1px solid #34507a;
+    border-radius: 7px; padding: 6px 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .controls input:focus { outline: none; border-color: var(--good); }
+  .controls .hint { color: var(--muted); font-size: 12.5px; }
+  .summary { max-width: 1180px; margin: 10px auto 22px;
+    background: var(--card); border: 1px solid #24344f; border-radius: 14px; padding: 14px 18px; }
+  .summary h2 { font-size: 14px; margin: 0 0 8px; color: var(--good); letter-spacing: .3px; text-transform: uppercase; }
+  .summary ul { margin: 0; padding-left: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 10px; }
+  .summary li { background: var(--good-soft); border: 1px solid #5a531a; color: #ffe98a;
+    padding: 6px 11px; border-radius: 999px; font-size: 13px; }
+  .summary .none { color: var(--muted); font-size: 13px; }
+  .grid { max-width: 1180px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+  .card { background: var(--card); border: 1px solid #24344f; border-radius: 14px;
+    padding: 12px 14px 6px; position: relative; transition: transform .12s ease; }
+  .card .day { font-weight: 700; font-size: 15px; }
+  .metrics { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0 2px; }
+  .metrics .mtime { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .metric { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
+    background: #0e1a2b; border: 1px solid #283a58; border-radius: 8px; padding: 5px 9px; color: var(--ink); }
+  .metric .ico { font-size: 13px; }
+  .metric b { font-variant-numeric: tabular-nums; }
+  .metric .dir { color: var(--muted); }
+  .metric .sub2 { color: var(--muted); }
+  .metric .arrow { display: inline-block; font-size: 14px; line-height: 1; transition: none; }
+  .metric.w-calm { border-color: #2f6b3f; }
+  .metric.w-mod  { border-color: #6b5a2f; }
+  .metric.w-strong { border-color: #8a3b3b; }
+  .metric.w-strong b { color: #ff9c9c; }
+  .card .date { color: var(--muted); font-size: 12.5px; font-weight: 400; }
+  .badge { position: absolute; top: 11px; right: 12px; background: var(--good); color: #1a1500;
+    font-weight: 700; font-size: 11.5px; padding: 4px 9px; border-radius: 999px; }
+  .chartwrap { height: 190px; margin-top: 4px; }
+  .sun { display: flex; gap: 14px; color: var(--muted); font-size: 11.5px; padding: 2px 2px 8px; }
+  .loading, .error { max-width: 1180px; margin: 40px auto; text-align: center; color: var(--muted); }
+  .error { color: #ff9c9c; }
+  a { color: #7cc1ff; }
+  footer { max-width: 1180px; margin: 30px auto 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐾 Beach, Please</h1>
+  <div class="tagline">Low Tide, Good Boy</div>
+  <div class="controls">
+    <label>🦴 Highlight low tides at or below
+      <input type="number" id="threshold" value="1" step="0.1" min="-3" max="8" />
+      ft
+    </label>
+    <span class="hint">that fall between noon and last light</span>
+  </div>
+</header>
+
+<section class="summary" id="summary" style="display:none">
+  <h2>🦴 Good beach dog-walk windows this week</h2>
+  <ul id="summaryList"></ul>
+</section>
+
+<div class="loading" id="loading">Fetching NOAA tide predictions…</div>
+<div class="error" id="error" style="display:none"></div>
+<main class="grid" id="grid"></main>
+
+<footer>
+  Tides: NOAA CO-OPS predictions, datum MLLW, heights in feet. Sun/“last light”
+  (end of civil twilight, sun −6°) computed locally for 33.20°N, −117.38°W.
+  A day is highlighted yellow when a <b>low tide</b> falls between <b>12:00&nbsp;noon and last light</b>.
+  Predictions are estimates — always check conditions before heading out.
+</footer>
+
+<script>
+const LAT = 33.1959, LNG = -117.3795, TZ = "America/Los_Angeles";
+
+/* ---------- Sun calculations (compact SunCalc algorithm) ---------- */
+const rad = Math.PI / 180, dayMs = 864e5, J1970 = 2440588, J2000 = 2451545;
+const e = rad * 23.4397;
+const toJulian = d => d.valueOf() / dayMs - 0.5 + J1970;
+const fromJulian = j => new Date((j + 0.5 - J1970) * dayMs);
+const toDays = d => toJulian(d) - J2000;
+const sma = d => rad * (357.5291 + 0.98560028 * d);
+const eclLon = M => M + rad * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2*M) + 0.0003 * Math.sin(3*M)) + rad * 102.9372 + Math.PI;
+const dec = l => Math.asin(Math.sin(e) * Math.sin(l));
+const J0 = 0.0009;
+const approxTransit = (Ht, lw, n) => J0 + (Ht + lw) / (2 * Math.PI) + n;
+const solarTransitJ = (ds, M, L) => J2000 + ds + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * L);
+const hourAngle = (h, phi, d) => Math.acos((Math.sin(h) - Math.sin(phi) * Math.sin(d)) / (Math.cos(phi) * Math.cos(d)));
+function sunSet(date, lat, lng, angleDeg) {
+  const lw = rad * -lng, phi = rad * lat, d = toDays(date);
+  const n = Math.round(d - J0 - lw / (2 * Math.PI));
+  const ds = approxTransit(0, lw, n);
+  const M = sma(ds), L = eclLon(M), decl = dec(L);
+  const w = hourAngle(angleDeg * rad, phi, decl);
+  return fromJulian(solarTransitJ(approxTransit(w, lw, n), M, L));
+}
+
+/* Wall-clock minutes-of-day for an absolute instant, in Oceanside's timezone. */
+function tzMinutes(d) {
+  const p = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
+  const h = +p.find(x => x.type === "hour").value % 24;
+  const m = +p.find(x => x.type === "minute").value;
+  return h * 60 + m;
+}
+const fmtClock = mins => {
+  let h = Math.floor(mins / 60), m = Math.round(mins % 60);
+  const ap = h >= 12 ? "pm" : "am"; const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${String(m).padStart(2, "0")}${ap}`;
+};
+
+/* ---------- date helpers (all in Oceanside local time) ---------- */
+function laParts(d) {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d);
+  return p.find(x => x.type === "year").value + "-" + p.find(x => x.type === "month").value + "-" + p.find(x => x.type === "day").value;
+}
+const WEEKDAY = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTH = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// 16-point compass label for a "coming from" bearing in degrees.
+const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compass = deg => COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+
+// Build a wind + swell pill row for the hour of a qualifying low tide.
+// Arrows point the direction of travel (deg + 180, since wind/swell bearings are
+// "coming from"); labels show the source.
+function metricsRow(m, mins) {
+  const at = `<span class="mtime">🕓 at ${fmtClock(mins)}</span>`;
+  if (!m) return `<div class="metrics">${at}<span class="metric"><span class="sub2">marine data unavailable</span></span></div>`;
+  let html = `<div class="metrics">${at}`;
+
+  if (m.windMph != null && m.windDir != null) {
+    const mph = Math.round(m.windMph);
+    const cls = mph < 8 ? "w-calm" : mph < 18 ? "w-mod" : "w-strong";
+    const gust = m.gustMph != null ? ` <span class="sub2">g${Math.round(m.gustMph)}</span>` : "";
+    html += `<span class="metric ${cls}" title="Wind from ${compass(m.windDir)} (${Math.round(m.windDir)}°), max ${mph} mph${m.gustMph != null ? ", gusts " + Math.round(m.gustMph) : ""}">`
+      + `<span class="ico">💨</span>`
+      + `<span class="arrow" style="transform:rotate(${(m.windDir + 180) % 360}deg)">↑</span>`
+      + `<b>${mph}</b> mph <span class="dir">${compass(m.windDir)}</span>${gust}</span>`;
+  }
+
+  if (m.swellHeightFt != null && m.swellDir != null) {
+    const per = m.swellPeriod != null ? ` <span class="sub2">· ${Math.round(m.swellPeriod)}s</span>` : "";
+    html += `<span class="metric" title="Swell from ${compass(m.swellDir)} (${Math.round(m.swellDir)}°), ${m.swellHeightFt} ft${m.swellPeriod != null ? ", " + Math.round(m.swellPeriod) + "s period" : ""}">`
+      + `<span class="ico">🌊</span>`
+      + `<span class="arrow" style="transform:rotate(${(m.swellDir + 180) % 360}deg)">↑</span>`
+      + `<b>${m.swellHeightFt}</b> ft <span class="dir">${compass(m.swellDir)}</span>${per}</span>`;
+  }
+
+  return html + `</div>`;
+}
+
+/* ---------- main ---------- */
+async function main() {
+  let data;
+  try {
+    const r = await fetch("/api/tides");
+    data = await r.json();
+    if (data.error) throw new Error(data.error);
+  } catch (err) {
+    document.getElementById("loading").style.display = "none";
+    const e = document.getElementById("error");
+    e.style.display = "block";
+    e.textContent = "Could not load tides: " + err.message + ". (Are you online? The server proxies NOAA.)";
+    return;
+  }
+
+  const stationEl = document.getElementById("stationline");
+  if (stationEl) stationEl.innerHTML =
+    `Station: <b>${data.stationName}</b> · datum ${data.datum} · heights in ${data.units}`;
+
+  // Build the 7 local days, in order, starting today.
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const inst = new Date(Date.now() + i * dayMs);
+    const key = laParts(inst);
+    days.push({ key, inst, hilo: [], curve: [] });
+  }
+  const byKey = Object.fromEntries(days.map(d => [d.key, d]));
+
+  const parse = t => {           // "2026-06-02 16:04" -> {key, mins}
+    const [datePart, timePart] = t.split(" ");
+    const [hh, mm] = timePart.split(":").map(Number);
+    return { key: datePart, mins: hh * 60 + mm };
+  };
+
+  data.hilo.forEach(p => { const x = parse(p.t); if (byKey[x.key]) byKey[x.key].hilo.push({ mins: x.mins, v: +p.v, type: p.type }); });
+  data.curve.forEach(p => { const x = parse(p.t); if (byKey[x.key]) byKey[x.key].curve.push({ mins: x.mins, v: +p.v }); });
+
+  // Precompute per-day sun events & labels (independent of the threshold).
+  const NOON = 12 * 60;
+  days.forEach(day => {
+    const noonInst = new Date(day.inst);
+    noonInst.setUTCHours(20, 0, 0, 0); // ~local midday regardless of DST
+    day.sunsetMin = tzMinutes(sunSet(noonInst, LAT, LNG, -0.833));
+    day.lastLightMin = tzMinutes(sunSet(noonInst, LAT, LNG, -6));
+    const [Y, M, D] = day.key.split("-").map(Number);
+    day.weekday = WEEKDAY[new Date(Date.UTC(Y, M - 1, D)).getUTCDay()];
+    day.dateLabel = `${MONTH[M - 1]} ${D}`;
+  });
+
+  // Hourly wind/swell record nearest to a given time (minutes of day) on a date.
+  const marineAt = (dateKey, mins) => {
+    const hh = String(Math.min(23, Math.max(0, Math.round(mins / 60)))).padStart(2, "0");
+    return (data.marine && data.marine[`${dateKey}T${hh}:00`]) || null;
+  };
+
+  document.getElementById("loading").style.display = "none";
+  const grid = document.getElementById("grid");
+  const sum = document.getElementById("summary");
+  const list = document.getElementById("summaryList");
+  sum.style.display = "block";
+  let charts = [];
+
+  function renderAll(threshold) {
+    charts.forEach(c => c.destroy());
+    charts = [];
+    grid.innerHTML = "";
+    list.innerHTML = "";
+    const goodWindows = [];
+
+    days.forEach(day => {
+      // Qualifying: low tide, noon <= time <= last light, AND height <= threshold.
+      const goodLows = day.hilo.filter(t =>
+        t.type === "L" && t.mins >= NOON && t.mins <= day.lastLightMin && t.v <= threshold);
+      const isGood = goodLows.length > 0;
+      goodLows.forEach(l => goodWindows.push(`${day.weekday} ${fmtClock(l.mins)} · ${l.v.toFixed(1)} ${data.units} low`));
+
+      const card = document.createElement("section");
+      card.className = "card";
+      card.innerHTML =
+        `<div class="day">${day.weekday} <span class="date">${day.dateLabel}</span></div>` +
+        (isGood ? `<div class="badge">🐾 Bart approved</div>` : "") +
+        (isGood ? goodLows.map(l => metricsRow(marineAt(day.key, l.mins), l.mins)).join("") : "") +
+        `<div class="chartwrap"><canvas></canvas></div>` +
+        `<div class="sun">☀︎ sunset ${fmtClock(day.sunsetMin)} &nbsp;·&nbsp; 🌆 last light ${fmtClock(day.lastLightMin)}</div>`;
+      grid.appendChild(card);
+      charts.push(renderChart(card.querySelector("canvas"), day, day.sunsetMin, day.lastLightMin, NOON, data.units, isGood));
+    });
+
+    if (goodWindows.length) {
+      goodWindows.forEach(w => { const li = document.createElement("li"); li.textContent = "🦴 " + w; list.appendChild(li); });
+    } else {
+      list.innerHTML = `<span class="none">No low tides at or below ${threshold.toFixed(1)} ${data.units} fall between noon and last light this week. Try raising the threshold.</span>`;
+    }
+  }
+
+  const thresholdInput = document.getElementById("threshold");
+  const readThreshold = () => { const v = parseFloat(thresholdInput.value); return isNaN(v) ? 1 : v; };
+  renderAll(readThreshold());
+  thresholdInput.addEventListener("input", () => renderAll(readThreshold()));
+}
+
+/* ---------- chart for one day ---------- */
+function renderChart(canvas, day, sunsetMin, lastLightMin, NOON, units, isGood) {
+  const curve = day.curve.slice().sort((a, b) => a.mins - b.mins).map(p => ({ x: p.mins / 60, y: p.v }));
+  const lows  = day.hilo.filter(t => t.type === "L").map(t => ({ x: t.mins / 60, y: t.v, mins: t.mins }));
+  const highs = day.hilo.filter(t => t.type === "H").map(t => ({ x: t.mins / 60, y: t.v, mins: t.mins }));
+
+  // custom plugin: yellow band + sunset/last-light lines + hi/lo labels
+  const overlay = {
+    id: "overlay",
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea: a, scales: { x } } = chart;
+      if (!a) return;
+      if (isGood) {
+        const x0 = x.getPixelForValue(NOON / 60), x1 = x.getPixelForValue(lastLightMin / 60);
+        ctx.save();
+        ctx.fillStyle = "rgba(255,210,31,.16)";
+        ctx.fillRect(x0, a.top, x1 - x0, a.bottom - a.top);
+        ctx.strokeStyle = "rgba(255,210,31,.5)";
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(x0 + .5, a.top, x1 - x0, a.bottom - a.top);
+        ctx.restore();
+      }
+    },
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea: a, scales: { x } } = chart;
+      if (!a) return;
+      ctx.save();
+      // sunset & last light vertical markers
+      [[sunsetMin, "rgba(255,180,80,.45)", "sunset"], [lastLightMin, "rgba(150,170,210,.5)", "last light"]].forEach(([m, c]) => {
+        const px = x.getPixelForValue(m / 60);
+        ctx.strokeStyle = c; ctx.setLineDash([2, 3]); ctx.beginPath();
+        ctx.moveTo(px, a.top); ctx.lineTo(px, a.bottom); ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      // hi/lo labels
+      ctx.font = "11px -apple-system, sans-serif"; ctx.textAlign = "center";
+      const place = (pts, color, dy) => pts.forEach(p => {
+        const px = x.getPixelForValue(p.x), py = chart.scales.y.getPixelForValue(p.y);
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(px, py, 3.2, 0, 7); ctx.fill();
+        ctx.fillStyle = "#cdd9e8";
+        ctx.fillText(`${fmtMins(p.mins)} · ${p.y.toFixed(1)}`, Math.min(Math.max(px, a.left + 30), a.right - 30), py + dy);
+      });
+      place(highs, "#9fb3cd", -8);
+      place(lows, "#7cc1ff", 16);
+      ctx.restore();
+    }
+  };
+
+  return new Chart(canvas, {
+    type: "line",
+    data: { datasets: [{
+      data: curve, borderColor: "#3aa0ff", borderWidth: 2,
+      backgroundColor: "rgba(58,160,255,.10)", fill: true,
+      tension: .4, pointRadius: 0
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: {
+          type: "linear", min: 0, max: 24,
+          ticks: { stepSize: 6, color: "#7e93b0", callback: v => v === 0 ? "12a" : v === 12 ? "12p" : v === 24 ? "" : (v < 12 ? v + "a" : (v - 12) + "p") },
+          grid: { color: "rgba(255,255,255,.05)" }
+        },
+        y: {
+          ticks: { color: "#7e93b0", callback: v => v + "'" },
+          grid: { color: "rgba(255,255,255,.05)" },
+          title: { display: false }
+        }
+      }
+    },
+    plugins: [overlay]
+  });
+}
+function fmtMins(mins) {
+  let h = Math.floor(mins / 60), m = mins % 60;
+  const ap = h >= 12 ? "p" : "a"; const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${String(m).padStart(2, "0")}${ap}`;
+}
+
+main();
+</script>
+</body>
+</html>
