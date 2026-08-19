@@ -102,8 +102,8 @@
   Tides: NOAA CO-OPS predictions, datum MLLW, heights in feet. Sun/“last light”
   (end of civil twilight, sun −6°) computed locally for 33.20°N, −117.38°W.
   A day is highlighted yellow when a <b>low tide</b> falls between <b>12:00&nbsp;noon and last light</b> and
-  stays at/below the height threshold for at least the selected window; the shaded band on the chart marks
-  that actual low-tide window.
+  the tide stays at/below the height threshold for the selected window, centered on the low; the shaded
+  band on the chart marks that window.
   Predictions are estimates — always check conditions before heading out.
 </footer>
 
@@ -306,32 +306,23 @@ async function main() {
 
   const todayKey = laParts(new Date());
 
-  // The contiguous span (in minutes-of-day) that the tide stays at or below
-  // `threshold` around a low tide at `lowMins`, interpolating between the
-  // hourly curve samples for the crossings.
-  function windowRangeAt(curve, lowMins, threshold) {
-    if (!curve.length) return { start: lowMins, end: lowMins };
+  // Interpolated tide height at `mins` from a sorted-by-mins curve, clamped
+  // to the first/last sample at the edges of the day.
+  function valueAt(curve, mins) {
     const pts = curve;
+    if (!pts.length) return 0;
+    if (mins <= pts[0].mins) return pts[0].v;
+    if (mins >= pts[pts.length - 1].mins) return pts[pts.length - 1].v;
     let i = 0;
-    while (i < pts.length - 1 && pts[i + 1].mins <= lowMins) i++;
+    while (pts[i + 1].mins < mins) i++;
+    const a = pts[i], b = pts[i + 1];
+    return a.v === b.v ? a.v : a.v + (mins - a.mins) / (b.mins - a.mins) * (b.v - a.v);
+  }
 
-    let startMins = pts[i].mins;
-    let j = i;
-    while (j > 0 && pts[j - 1].v <= threshold) { startMins = pts[j - 1].mins; j--; }
-    if (j > 0) {
-      const a = pts[j - 1], b = pts[j];
-      if (a.v !== b.v) startMins = a.mins + (threshold - a.v) / (b.v - a.v) * (b.mins - a.mins);
-    }
-
-    let endMins = pts[i].mins;
-    let k = i;
-    while (k < pts.length - 1 && pts[k + 1].v <= threshold) { endMins = pts[k + 1].mins; k++; }
-    if (k < pts.length - 1) {
-      const a = pts[k], b = pts[k + 1];
-      if (a.v !== b.v) endMins = a.mins + (threshold - a.v) / (b.v - a.v) * (b.mins - a.mins);
-    }
-
-    return { start: startMins, end: Math.max(startMins, endMins) };
+  // Whether the tide stays at or below `threshold` for the whole [start, end] span.
+  function staysBelow(curve, start, end, threshold) {
+    if (valueAt(curve, start) > threshold || valueAt(curve, end) > threshold) return false;
+    return curve.every(p => p.mins < start || p.mins > end || p.v <= threshold);
   }
 
   function renderAll(threshold, windowHours, filterGood) {
@@ -339,14 +330,16 @@ async function main() {
     charts = [];
     grid.innerHTML = "";
     let shown = 0;
+    const half = windowHours * 30; // windowHours*60 minutes, split evenly around the low
 
     days.forEach(day => {
       // Qualifying: low tide, noon <= time <= last light, height <= threshold,
-      // AND the tide stays at/below threshold for at least `windowHours`.
+      // AND the tide stays at/below threshold for the full `windowHours`-wide
+      // span centered on the low. The yellow band shows exactly this span.
       const goodLows = day.hilo
         .filter(t => t.type === "L" && t.mins >= NOON && t.mins <= day.lastLightMin && t.v <= threshold)
-        .map(t => ({ ...t, window: windowRangeAt(day.curve, t.mins, threshold) }))
-        .filter(t => t.window.end - t.window.start >= windowHours * 60);
+        .map(t => ({ ...t, window: { start: t.mins - half, end: t.mins + half } }))
+        .filter(t => staysBelow(day.curve, t.window.start, t.window.end, threshold));
       const isGood = goodLows.length > 0;
       if (filterGood && !isGood) return;
       shown++;
