@@ -101,7 +101,9 @@
 <footer>
   Tides: NOAA CO-OPS predictions, datum MLLW, heights in feet. Sun/“last light”
   (end of civil twilight, sun −6°) computed locally for 33.20°N, −117.38°W.
-  A day is highlighted yellow when a <b>low tide</b> falls between <b>12:00&nbsp;noon and last light</b>.
+  A day is highlighted yellow when a <b>low tide</b> falls between <b>12:00&nbsp;noon and last light</b> and
+  stays at/below the height threshold for at least the selected window; the shaded band on the chart marks
+  that actual low-tide window.
   Predictions are estimates — always check conditions before heading out.
 </footer>
 
@@ -304,10 +306,11 @@ async function main() {
 
   const todayKey = laParts(new Date());
 
-  // How long (in minutes) the tide stays at or below `threshold` around a low tide
-  // at `lowMins`, interpolating between the hourly curve samples for the crossings.
-  function windowMinutesAt(curve, lowMins, threshold) {
-    if (!curve.length) return 0;
+  // The contiguous span (in minutes-of-day) that the tide stays at or below
+  // `threshold` around a low tide at `lowMins`, interpolating between the
+  // hourly curve samples for the crossings.
+  function windowRangeAt(curve, lowMins, threshold) {
+    if (!curve.length) return { start: lowMins, end: lowMins };
     const pts = curve;
     let i = 0;
     while (i < pts.length - 1 && pts[i + 1].mins <= lowMins) i++;
@@ -328,7 +331,7 @@ async function main() {
       if (a.v !== b.v) endMins = a.mins + (threshold - a.v) / (b.v - a.v) * (b.mins - a.mins);
     }
 
-    return Math.max(0, endMins - startMins);
+    return { start: startMins, end: Math.max(startMins, endMins) };
   }
 
   function renderAll(threshold, windowHours, filterGood) {
@@ -340,9 +343,10 @@ async function main() {
     days.forEach(day => {
       // Qualifying: low tide, noon <= time <= last light, height <= threshold,
       // AND the tide stays at/below threshold for at least `windowHours`.
-      const goodLows = day.hilo.filter(t =>
-        t.type === "L" && t.mins >= NOON && t.mins <= day.lastLightMin && t.v <= threshold
-        && windowMinutesAt(day.curve, t.mins, threshold) >= windowHours * 60);
+      const goodLows = day.hilo
+        .filter(t => t.type === "L" && t.mins >= NOON && t.mins <= day.lastLightMin && t.v <= threshold)
+        .map(t => ({ ...t, window: windowRangeAt(day.curve, t.mins, threshold) }))
+        .filter(t => t.window.end - t.window.start >= windowHours * 60);
       const isGood = goodLows.length > 0;
       if (filterGood && !isGood) return;
       shown++;
@@ -356,7 +360,7 @@ async function main() {
         `<div class="chartwrap"><canvas></canvas></div>` +
         `<div class="sun">☀︎ sunset ${fmtClock(day.sunsetMin)} &nbsp;·&nbsp; 🌆 last light ${fmtClock(day.lastLightMin)}</div>`;
       grid.appendChild(card);
-      charts.push(renderChart(card.querySelector("canvas"), day, day.sunsetMin, day.lastLightMin, NOON, data.units, isGood, yMin, yMax, isToday));
+      charts.push(renderChart(card.querySelector("canvas"), day, day.sunsetMin, day.lastLightMin, goodLows, data.units, isGood, yMin, yMax, isToday));
     });
 
     if (shown === 0) {
@@ -410,26 +414,28 @@ async function main() {
 }
 
 /* ---------- chart for one day ---------- */
-function renderChart(canvas, day, sunsetMin, lastLightMin, NOON, units, isGood, yMin, yMax, isToday) {
+function renderChart(canvas, day, sunsetMin, lastLightMin, goodLows, units, isGood, yMin, yMax, isToday) {
   const curve = day.curve.slice().sort((a, b) => a.mins - b.mins).map(p => ({ x: p.mins / 60, y: p.v }));
   const lows  = day.hilo.filter(t => t.type === "L").map(t => ({ x: t.mins / 60, y: t.v, mins: t.mins }));
   const highs = day.hilo.filter(t => t.type === "H").map(t => ({ x: t.mins / 60, y: t.v, mins: t.mins }));
   const nowMins = isToday ? tzMinutes(new Date()) : null;
 
-  // custom plugin: yellow band + sunset/last-light lines + hi/lo labels
+  // custom plugin: yellow band(s) over each qualifying low's window + sunset/last-light lines + hi/lo labels
   const overlay = {
     id: "overlay",
     beforeDatasetsDraw(chart) {
       const { ctx, chartArea: a, scales: { x } } = chart;
       if (!a) return;
       if (isGood) {
-        const x0 = x.getPixelForValue(NOON / 60), x1 = x.getPixelForValue(lastLightMin / 60);
         ctx.save();
-        ctx.fillStyle = "rgba(255,210,31,.16)";
-        ctx.fillRect(x0, a.top, x1 - x0, a.bottom - a.top);
-        ctx.strokeStyle = "rgba(255,210,31,.5)";
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(x0 + .5, a.top, x1 - x0, a.bottom - a.top);
+        goodLows.forEach(l => {
+          const x0 = x.getPixelForValue(l.window.start / 60), x1 = x.getPixelForValue(l.window.end / 60);
+          ctx.fillStyle = "rgba(255,210,31,.16)";
+          ctx.fillRect(x0, a.top, x1 - x0, a.bottom - a.top);
+          ctx.strokeStyle = "rgba(255,210,31,.5)";
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(x0 + .5, a.top, x1 - x0, a.bottom - a.top);
+        });
         ctx.restore();
       }
     },
