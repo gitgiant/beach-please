@@ -27,6 +27,12 @@
   h1 { margin: 0 0 1px; font-size: 19px; letter-spacing: .2px; }
   .tagline { color: var(--good); font-size: 12px; font-weight: 600; margin: 0; }
   .header-controls { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
+  .filter-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--card);
+    border: 1px solid #24344f; border-radius: 9px; padding: 5px 10px; font-size: 11.5px;
+    color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .filter-btn:hover { border-color: var(--good); }
+  .filter-btn.active { background: var(--good-soft); border-color: #5a531a; color: #ffe98a; }
+  .none { max-width: 1180px; margin: 0 auto; color: var(--muted); font-size: 13px; padding: 6px 2px; }
   .stepper { display: flex; align-items: center; gap: 5px; background: var(--card);
     border: 1px solid #24344f; border-radius: 9px; padding: 4px 6px; flex: 0 0 auto; }
   .stepper .lbl { color: var(--muted); font-size: 11px; padding-left: 2px; }
@@ -71,6 +77,8 @@
     <div class="tagline">Low Tide, Good Boy</div>
   </div>
   <div class="header-controls">
+    <button type="button" id="filterToggle" class="filter-btn" aria-pressed="true"
+      title="Show only days with a qualifying low tide">🦴 Low tide days</button>
     <div class="stepper" id="stepper" title="Highlight low tides at or below this height, between noon and last light">
       <span class="lbl">🦴 ≤</span>
       <button type="button" id="stepDown" aria-label="Decrease threshold">−</button>
@@ -323,10 +331,11 @@ async function main() {
     return Math.max(0, endMins - startMins);
   }
 
-  function renderAll(threshold, windowHours) {
+  function renderAll(threshold, windowHours, filterGood) {
     charts.forEach(c => c.destroy());
     charts = [];
     grid.innerHTML = "";
+    let shown = 0;
 
     days.forEach(day => {
       // Qualifying: low tide, noon <= time <= last light, height <= threshold,
@@ -335,6 +344,8 @@ async function main() {
         t.type === "L" && t.mins >= NOON && t.mins <= day.lastLightMin && t.v <= threshold
         && windowMinutesAt(day.curve, t.mins, threshold) >= windowHours * 60);
       const isGood = goodLows.length > 0;
+      if (filterGood && !isGood) return;
+      shown++;
       const isToday = day.key === todayKey;
 
       const card = document.createElement("section");
@@ -347,15 +358,25 @@ async function main() {
       grid.appendChild(card);
       charts.push(renderChart(card.querySelector("canvas"), day, day.sunsetMin, day.lastLightMin, NOON, data.units, isGood, yMin, yMax, isToday));
     });
+
+    if (shown === 0) {
+      grid.insertAdjacentHTML("afterend",
+        `<div class="none" id="noneMsg">No low tides at or below ${threshold.toFixed(1)} ${data.units} stay there for ${windowHours.toFixed(1)}h between noon and last light this week. Try adjusting the threshold/window or turning off the filter.</div>`);
+    }
   }
 
   let threshold = 1;
   let windowHours = 1;
+  let filterGood = true;
   const thresholdVal = document.getElementById("thresholdVal");
   const windowVal = document.getElementById("windowVal");
   const paintThreshold = () => { thresholdVal.textContent = threshold.toFixed(1) + "'"; };
   const paintWindow = () => { windowVal.textContent = windowHours.toFixed(1) + "h"; };
-  const rerender = () => renderAll(threshold, windowHours);
+  const rerender = () => {
+    const prevNone = document.getElementById("noneMsg");
+    if (prevNone) prevNone.remove();
+    renderAll(threshold, windowHours, filterGood);
+  };
   const step = (delta) => {
     threshold = Math.min(8, Math.max(-3, Math.round((threshold + delta) * 10) / 10));
     paintThreshold();
@@ -370,6 +391,15 @@ async function main() {
   document.getElementById("stepUp").addEventListener("click", () => step(0.5));
   document.getElementById("windowDown").addEventListener("click", () => stepWindow(-0.5));
   document.getElementById("windowUp").addEventListener("click", () => stepWindow(0.5));
+
+  const filterBtn = document.getElementById("filterToggle");
+  filterBtn.classList.add("active");
+  filterBtn.addEventListener("click", () => {
+    filterGood = !filterGood;
+    filterBtn.classList.toggle("active", filterGood);
+    filterBtn.setAttribute("aria-pressed", String(filterGood));
+    rerender();
+  });
 
   paintThreshold();
   paintWindow();
