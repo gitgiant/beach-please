@@ -26,6 +26,13 @@
     align-items: flex-start; justify-content: space-between; gap: 10px; }
   h1 { margin: 0 0 1px; font-size: 19px; letter-spacing: .2px; }
   .tagline { color: var(--good); font-size: 12px; font-weight: 600; margin: 0; }
+  .header-controls { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
+  .filter-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--card);
+    border: 1px solid #24344f; border-radius: 9px; padding: 5px 10px; font-size: 11.5px;
+    color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .filter-btn:hover { border-color: var(--good); }
+  .filter-btn.active { background: var(--good-soft); border-color: #5a531a; color: #ffe98a; }
+  .none { max-width: 1180px; margin: 0 auto; color: var(--muted); font-size: 13px; padding: 6px 2px; }
   .stepper { display: flex; align-items: center; gap: 5px; background: var(--card);
     border: 1px solid #24344f; border-radius: 9px; padding: 4px 6px; flex: 0 0 auto; }
   .stepper .lbl { color: var(--muted); font-size: 11px; padding-left: 2px; }
@@ -71,11 +78,15 @@
     <h1>🐾 Bart Beach Report</h1>
     <div class="tagline">Low Tide, Good Boy</div>
   </div>
-  <div class="stepper" id="stepper" title="Highlight low tides at or below this height, between noon and last light">
-    <span class="lbl">🦴 ≤</span>
-    <button type="button" id="stepDown" aria-label="Decrease threshold">−</button>
-    <span class="val" id="thresholdVal">1.0'</span>
-    <button type="button" id="stepUp" aria-label="Increase threshold">+</button>
+  <div class="header-controls">
+    <button type="button" id="filterToggle" class="filter-btn" aria-pressed="true"
+      title="Show only days with a qualifying low tide">🦴 Low tide days</button>
+    <div class="stepper" id="stepper" title="Highlight low tides at or below this height, between noon and last light">
+      <span class="lbl">🦴 ≤</span>
+      <button type="button" id="stepDown" aria-label="Decrease threshold">−</button>
+      <span class="val" id="thresholdVal">1.0'</span>
+      <button type="button" id="stepUp" aria-label="Increase threshold">+</button>
+    </div>
   </div>
 </header>
 
@@ -289,16 +300,19 @@ async function main() {
 
   const todayKey = laParts(new Date());
 
-  function renderAll(threshold) {
+  function renderAll(threshold, filterGood) {
     charts.forEach(c => c.destroy());
     charts = [];
     grid.innerHTML = "";
+    let shown = 0;
 
     days.forEach(day => {
       // Qualifying: low tide, noon <= time <= last light, AND height <= threshold.
       const goodLows = day.hilo.filter(t =>
         t.type === "L" && t.mins >= NOON && t.mins <= day.lastLightMin && t.v <= threshold);
       const isGood = goodLows.length > 0;
+      if (filterGood && !isGood) return;
+      shown++;
       const isToday = day.key === todayKey;
 
       const card = document.createElement("section");
@@ -312,24 +326,44 @@ async function main() {
       grid.appendChild(card);
       charts.push(renderChart(card.querySelector("canvas"), day, day.sunsetMin, day.lastLightMin, NOON, data.units, isGood, yMin, yMax, isToday));
     });
+
+    if (shown === 0) {
+      grid.insertAdjacentHTML("afterend",
+        `<div class="none" id="noneMsg">No low tides at or below ${threshold.toFixed(1)} ${data.units} fall between noon and last light this week. Try raising the threshold or turning off the filter.</div>`);
+    }
   }
 
   let threshold = 1;
+  let filterGood = true;
   const thresholdVal = document.getElementById("thresholdVal");
   const paintThreshold = () => { thresholdVal.textContent = threshold.toFixed(1) + "'"; };
+  const rerender = () => {
+    const prevNone = document.getElementById("noneMsg");
+    if (prevNone) prevNone.remove();
+    renderAll(threshold, filterGood);
+  };
   const step = (delta) => {
     threshold = Math.min(8, Math.max(-3, Math.round((threshold + delta) * 10) / 10));
     paintThreshold();
-    renderAll(threshold);
+    rerender();
   };
   document.getElementById("stepDown").addEventListener("click", () => step(-0.5));
   document.getElementById("stepUp").addEventListener("click", () => step(0.5));
 
+  const filterBtn = document.getElementById("filterToggle");
+  filterBtn.classList.add("active");
+  filterBtn.addEventListener("click", () => {
+    filterGood = !filterGood;
+    filterBtn.classList.toggle("active", filterGood);
+    filterBtn.setAttribute("aria-pressed", String(filterGood));
+    rerender();
+  });
+
   paintThreshold();
-  renderAll(threshold);
+  rerender();
 
   // Keep the "now" line on today's chart current.
-  setInterval(() => renderAll(threshold), 5 * 60 * 1000);
+  setInterval(rerender, 5 * 60 * 1000);
 }
 
 /* ---------- chart for one day ---------- */
