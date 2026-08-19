@@ -20,77 +20,64 @@
   body {
     margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: radial-gradient(1200px 600px at 70% -10%, #1d3553, var(--bg));
-    color: var(--ink); min-height: 100vh; padding: 28px 20px 60px;
+    color: var(--ink); min-height: 100vh; padding: 14px 14px 30px;
   }
-  header { max-width: 1180px; margin: 0 auto 8px; }
-  h1 { margin: 0 0 2px; font-size: 26px; letter-spacing: .2px; }
-  .tagline { color: var(--good); font-size: 13.5px; font-weight: 600; margin: 0 0 6px; }
-  .sub { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
-  .sub b { color: var(--ink); }
-  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0 6px; font-size: 13px; color: var(--muted); }
-  .legend span { display: inline-flex; align-items: center; gap: 7px; }
-  .swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
-  .controls { max-width: 1180px; margin: 12px auto 0; display: flex; align-items: center;
-    gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid #24344f;
-    border-radius: 12px; padding: 11px 16px; }
-  .controls label { font-size: 13.5px; color: var(--ink); display: inline-flex; align-items: center; gap: 8px; }
-  .controls input { width: 64px; background: #0e1a2b; color: var(--ink); border: 1px solid #34507a;
-    border-radius: 7px; padding: 6px 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
-  .controls input:focus { outline: none; border-color: var(--good); }
-  .controls .hint { color: var(--muted); font-size: 12.5px; }
-  .summary { max-width: 1180px; margin: 10px auto 22px;
-    background: var(--card); border: 1px solid #24344f; border-radius: 14px; padding: 14px 18px; }
-  .summary h2 { font-size: 14px; margin: 0 0 8px; color: var(--good); letter-spacing: .3px; text-transform: uppercase; }
-  .summary ul { margin: 0; padding-left: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 10px; }
-  .summary li { background: var(--good-soft); border: 1px solid #5a531a; color: #ffe98a;
-    padding: 6px 11px; border-radius: 999px; font-size: 13px; }
-  .summary .none { color: var(--muted); font-size: 13px; }
+  header { max-width: 1180px; margin: 0 auto 10px; display: flex; flex-wrap: wrap;
+    align-items: flex-start; justify-content: space-between; gap: 10px; }
+  h1 { margin: 0 0 1px; font-size: 19px; letter-spacing: .2px; }
+  .tagline { color: var(--good); font-size: 12px; font-weight: 600; margin: 0; }
+  .stepper { display: flex; align-items: center; gap: 5px; background: var(--card);
+    border: 1px solid #24344f; border-radius: 9px; padding: 4px 6px; flex: 0 0 auto; }
+  .stepper .lbl { color: var(--muted); font-size: 11px; padding-left: 2px; }
+  .stepper button { width: 20px; height: 20px; border-radius: 5px; border: 1px solid #34507a;
+    background: #0e1a2b; color: var(--ink); font-size: 13px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0; }
+  .stepper button:hover { border-color: var(--good); color: var(--good); }
+  .stepper button:active { transform: scale(.92); }
+  .stepper .val { min-width: 38px; text-align: center; font-variant-numeric: tabular-nums;
+    font-weight: 600; font-size: 12.5px; }
   .grid { max-width: 1180px; margin: 0 auto; display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
-  .card { background: var(--card); border: 1px solid #24344f; border-radius: 14px;
-    padding: 12px 14px 6px; position: relative; transition: transform .12s ease; }
-  .card .day { font-weight: 700; font-size: 15px; }
-  .metrics { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0 2px; }
-  .metrics .mtime { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .metric { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
-    background: #0e1a2b; border: 1px solid #283a58; border-radius: 8px; padding: 5px 9px; color: var(--ink); }
-  .metric .ico { font-size: 13px; }
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .card { background: var(--card); border: 1px solid #24344f; border-radius: 11px;
+    padding: 8px 10px 4px; position: relative; transition: transform .12s ease; }
+  .card .day { font-weight: 700; font-size: 13px; }
+  .metrics { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 6px 0 2px; }
+  .metrics .mtime { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .metric { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px;
+    background: #0e1a2b; border: 1px solid #283a58; border-radius: 7px; padding: 3px 7px; color: var(--ink); }
+  .metric .ico { font-size: 12px; }
   .metric b { font-variant-numeric: tabular-nums; }
   .metric .dir { color: var(--muted); }
   .metric .sub2 { color: var(--muted); }
-  .metric .arrow { display: inline-block; font-size: 14px; line-height: 1; transition: none; }
+  .metric .arrow { display: inline-block; font-size: 13px; line-height: 1; transition: none; }
   .metric.w-calm { border-color: #2f6b3f; }
   .metric.w-mod  { border-color: #6b5a2f; }
   .metric.w-strong { border-color: #8a3b3b; }
   .metric.w-strong b { color: #ff9c9c; }
-  .card .date { color: var(--muted); font-size: 12.5px; font-weight: 400; }
-  .badge { position: absolute; top: 11px; right: 12px; background: var(--good); color: #1a1500;
-    font-weight: 700; font-size: 11.5px; padding: 4px 9px; border-radius: 999px; }
-  .chartwrap { height: 190px; margin-top: 4px; }
-  .sun { display: flex; gap: 14px; color: var(--muted); font-size: 11.5px; padding: 2px 2px 8px; }
+  .card .date { color: var(--muted); font-size: 11px; font-weight: 400; }
+  .badge { position: absolute; top: 8px; right: 10px; background: var(--good); color: #1a1500;
+    font-weight: 700; font-size: 10.5px; padding: 3px 8px; border-radius: 999px; }
+  .chartwrap { height: 150px; margin-top: 2px; }
+  .sun { display: flex; gap: 12px; color: var(--muted); font-size: 10.5px; padding: 1px 2px 6px; }
   .loading, .error { max-width: 1180px; margin: 40px auto; text-align: center; color: var(--muted); }
   .error { color: #ff9c9c; }
   a { color: #7cc1ff; }
-  footer { max-width: 1180px; margin: 30px auto 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  footer { max-width: 1180px; margin: 18px auto 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 </style>
 </head>
 <body>
 <header>
-  <h1>🐾 Bart Beach Report</h1>
-  <div class="tagline">Low Tide, Good Boy</div>
-  <div class="controls">
-    <label>🦴 Highlight low tides at or below
-      <input type="number" id="threshold" value="1" step="0.1" min="-3" max="8" />
-      ft
-    </label>
-    <span class="hint">that fall between noon and last light</span>
+  <div>
+    <h1>🐾 Bart Beach Report</h1>
+    <div class="tagline">Low Tide, Good Boy</div>
+  </div>
+  <div class="stepper" id="stepper" title="Highlight low tides at or below this height, between noon and last light">
+    <span class="lbl">🦴 ≤</span>
+    <button type="button" id="stepDown" aria-label="Decrease threshold">−</button>
+    <span class="val" id="thresholdVal">1.0'</span>
+    <button type="button" id="stepUp" aria-label="Increase threshold">+</button>
   </div>
 </header>
-
-<section class="summary" id="summary" style="display:none">
-  <h2>🦴 Good beach dog-walk windows this week</h2>
-  <ul id="summaryList"></ul>
-</section>
 
 <div class="loading" id="loading">Fetching NOAA tide predictions…</div>
 <div class="error" id="error" style="display:none"></div>
@@ -288,24 +275,31 @@ async function main() {
 
   document.getElementById("loading").style.display = "none";
   const grid = document.getElementById("grid");
-  const sum = document.getElementById("summary");
-  const list = document.getElementById("summaryList");
-  sum.style.display = "block";
   let charts = [];
+
+  // Same y-axis scale on every chart: the week's lowest and highest tide height.
+  let weekMin = Infinity, weekMax = -Infinity;
+  days.forEach(day => {
+    day.curve.forEach(p => { if (p.v < weekMin) weekMin = p.v; if (p.v > weekMax) weekMax = p.v; });
+    day.hilo.forEach(p => { if (p.v < weekMin) weekMin = p.v; if (p.v > weekMax) weekMax = p.v; });
+  });
+  const weekPad = Math.max(0.3, (weekMax - weekMin) * 0.08);
+  const yMin = Math.floor((weekMin - weekPad) * 10) / 10;
+  const yMax = Math.ceil((weekMax + weekPad) * 10) / 10;
+
+  const todayKey = laParts(new Date());
 
   function renderAll(threshold) {
     charts.forEach(c => c.destroy());
     charts = [];
     grid.innerHTML = "";
-    list.innerHTML = "";
-    const goodWindows = [];
 
     days.forEach(day => {
       // Qualifying: low tide, noon <= time <= last light, AND height <= threshold.
       const goodLows = day.hilo.filter(t =>
         t.type === "L" && t.mins >= NOON && t.mins <= day.lastLightMin && t.v <= threshold);
       const isGood = goodLows.length > 0;
-      goodLows.forEach(l => goodWindows.push(`${day.weekday} ${fmtClock(l.mins)} · ${l.v.toFixed(1)} ${data.units} low`));
+      const isToday = day.key === todayKey;
 
       const card = document.createElement("section");
       card.className = "card";
@@ -316,27 +310,34 @@ async function main() {
         `<div class="chartwrap"><canvas></canvas></div>` +
         `<div class="sun">☀︎ sunset ${fmtClock(day.sunsetMin)} &nbsp;·&nbsp; 🌆 last light ${fmtClock(day.lastLightMin)}</div>`;
       grid.appendChild(card);
-      charts.push(renderChart(card.querySelector("canvas"), day, day.sunsetMin, day.lastLightMin, NOON, data.units, isGood));
+      charts.push(renderChart(card.querySelector("canvas"), day, day.sunsetMin, day.lastLightMin, NOON, data.units, isGood, yMin, yMax, isToday));
     });
-
-    if (goodWindows.length) {
-      goodWindows.forEach(w => { const li = document.createElement("li"); li.textContent = "🦴 " + w; list.appendChild(li); });
-    } else {
-      list.innerHTML = `<span class="none">No low tides at or below ${threshold.toFixed(1)} ${data.units} fall between noon and last light this week. Try raising the threshold.</span>`;
-    }
   }
 
-  const thresholdInput = document.getElementById("threshold");
-  const readThreshold = () => { const v = parseFloat(thresholdInput.value); return isNaN(v) ? 1 : v; };
-  renderAll(readThreshold());
-  thresholdInput.addEventListener("input", () => renderAll(readThreshold()));
+  let threshold = 1;
+  const thresholdVal = document.getElementById("thresholdVal");
+  const paintThreshold = () => { thresholdVal.textContent = threshold.toFixed(1) + "'"; };
+  const step = (delta) => {
+    threshold = Math.min(8, Math.max(-3, Math.round((threshold + delta) * 10) / 10));
+    paintThreshold();
+    renderAll(threshold);
+  };
+  document.getElementById("stepDown").addEventListener("click", () => step(-0.5));
+  document.getElementById("stepUp").addEventListener("click", () => step(0.5));
+
+  paintThreshold();
+  renderAll(threshold);
+
+  // Keep the "now" line on today's chart current.
+  setInterval(() => renderAll(threshold), 5 * 60 * 1000);
 }
 
 /* ---------- chart for one day ---------- */
-function renderChart(canvas, day, sunsetMin, lastLightMin, NOON, units, isGood) {
+function renderChart(canvas, day, sunsetMin, lastLightMin, NOON, units, isGood, yMin, yMax, isToday) {
   const curve = day.curve.slice().sort((a, b) => a.mins - b.mins).map(p => ({ x: p.mins / 60, y: p.v }));
   const lows  = day.hilo.filter(t => t.type === "L").map(t => ({ x: t.mins / 60, y: t.v, mins: t.mins }));
   const highs = day.hilo.filter(t => t.type === "H").map(t => ({ x: t.mins / 60, y: t.v, mins: t.mins }));
+  const nowMins = isToday ? tzMinutes(new Date()) : null;
 
   // custom plugin: yellow band + sunset/last-light lines + hi/lo labels
   const overlay = {
@@ -366,6 +367,15 @@ function renderChart(canvas, day, sunsetMin, lastLightMin, NOON, units, isGood) 
         ctx.moveTo(px, a.top); ctx.lineTo(px, a.bottom); ctx.stroke();
       });
       ctx.setLineDash([]);
+      // "now" marker on today's chart
+      if (nowMins != null) {
+        const px = x.getPixelForValue(nowMins / 60);
+        ctx.strokeStyle = "#ff5a6a"; ctx.lineWidth = 1.5; ctx.beginPath();
+        ctx.moveTo(px, a.top); ctx.lineTo(px, a.bottom); ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.fillStyle = "#ff5a6a"; ctx.font = "10px -apple-system, sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("now", Math.min(Math.max(px, a.left + 14), a.right - 14), a.top + 9);
+      }
       // hi/lo labels
       ctx.font = "11px -apple-system, sans-serif"; ctx.textAlign = "center";
       const place = (pts, color, dy) => pts.forEach(p => {
@@ -398,7 +408,8 @@ function renderChart(canvas, day, sunsetMin, lastLightMin, NOON, units, isGood) 
           grid: { color: "rgba(255,255,255,.05)" }
         },
         y: {
-          ticks: { color: "#7e93b0", callback: v => v + "'" },
+          min: yMin, max: yMax,
+          ticks: { color: "#7e93b0", callback: v => (Math.round(v * 10) / 10) + "'" },
           grid: { color: "rgba(255,255,255,.05)" },
           title: { display: false }
         }
